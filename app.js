@@ -17,6 +17,15 @@ function init() {
   // Scene & camera
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera();
+    const ambient = new THREE.AmbientLight(0xffffff, 1.5);
+  scene.add(ambient);
+
+  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.8);
+  scene.add(hemiLight);
+
+  const dirLight = new THREE.DirectionalLight(0xffffff, 2);
+  dirLight.position.set(3, 3, 3);
+  scene.add(dirLight);
 
   // Light
   const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
@@ -80,25 +89,25 @@ function onWindowResize() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
+let modelPlaced = false;
+
 function onSelect() {
   if (!reticle.visible || !model) return;
 
-  // Clone the model if you want multiple placements:
-  // const placed = model.clone(true);
-  // placed.position.setFromMatrixPosition(reticle.matrix);
-  // placed.quaternion.setFromRotationMatrix(reticle.matrix);
-  // placed.visible = true;
-  // scene.add(placed);
-
-  // For single placement: move the model to reticle
+  // Move the model to the reticle position
   model.position.setFromMatrixPosition(reticle.matrix);
   model.quaternion.setFromRotationMatrix(reticle.matrix);
   model.visible = true;
 
-  // optional: slightly raise so it doesn't clip floor
-  // model.position.y += 0.01;
-  showMessage('Placed model in scene. Tap again to reposition.');
+  // 🔥 Hide reticle after placement
+  reticle.visible = false;
+
+  // 🔥 Model is now placed (prevents reticle from showing again)
+  modelPlaced = true;
+
+  showMessage('Model placed.');
 }
+
 
 function renderLoop() {
   renderer.setAnimationLoop(render);
@@ -124,20 +133,21 @@ function render(timestamp, frame) {
       hitTestSourceRequested = true;
     }
 
-    if (hitTestSource) {
-      const referenceSpace = renderer.xr.getReferenceSpace();
-      const hitTestResults = frame.getHitTestResults(hitTestSource);
+    if (!modelPlaced && hitTestSource) {
+  const referenceSpace = renderer.xr.getReferenceSpace();
+  const hitTestResults = frame.getHitTestResults(hitTestSource);
 
-      if (hitTestResults.length > 0) {
-        const hit = hitTestResults[0];
-        const pose = hit.getPose(referenceSpace);
+  if (hitTestResults.length > 0) {
+    const hit = hitTestResults[0];
+    const pose = hit.getPose(referenceSpace);
 
-        reticle.visible = true;
-        reticle.matrix.fromArray(pose.transform.matrix);
-      } else {
-        reticle.visible = false;
-      }
-    }
+    reticle.visible = true;
+    reticle.matrix.fromArray(pose.transform.matrix);
+  } else {
+    reticle.visible = false;
+  }
+}
+
   }
 
   renderer.render(scene, camera);
